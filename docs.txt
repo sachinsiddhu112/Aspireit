@@ -1,0 +1,252 @@
+Architecture:
+
+Frontend
+Home Page: Displays information about the company with navigation buttons to login and sign up.
+Login Page: Allows users to log in using a username and password.
+Registration Page: Enables new users to register by providing a username, email, and password.
+Profile Page: Displays user details including profile image, description, username, and email, with an option to edit these details.
+Backend
+Authentication: Manages user login and registration.
+Profile Management: Handles fetching and updating user details.
+Database: Uses MongoDB to store user data.
+Key Components
+Frontend
+Technologies: React, CSS, Context API
+
+Context API (UserContext.js)
+
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+
+const UserContext = createContext();
+
+// Create a provider component
+export const UserProvider = ({ children }) => {
+  //getting the user details from browser memeory.
+  const memUser=sessionStorage.getItem("user")?JSON.parse(sessionStorage.getItem("user")):"";
+  const [user,setUser] = useState(memUser||{});
+
+  //on changing the value of user ,updating the user as well as updating the value stored in browser memory.
+  useEffect(()=>{
+    sessionStorage.setItem("user",JSON.stringify(user));
+  },[user])
+  // Context value
+  
+const value={user,setUser};
+  return (
+    <UserContext.Provider value={value}>
+      {children}
+    </UserContext.Provider>
+  );
+};
+
+// Create a custom hook to use the UserContext
+export const useUser = () => {
+  return useContext(UserContext);
+};
+
+
+Backend
+Technologies: Node.js, Express, MongoDB, Mongoose, JWT, Multer
+
+Models
+
+User Model (models/User.js)
+
+const mongoose = require('mongoose');
+
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+    required: true,
+  },
+  email: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  password: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+  },
+  profileImage: {
+    type: String, // Store image as a base64 string or URL
+  },
+});
+
+const User = mongoose.model('User', userSchema);
+module.exports = User;
+
+
+Routes
+
+User Routes (routes/userRoutes.js)
+
+// Registration Endpoint
+router.post('/register', async (req, res) => {
+  const { username, email, password } = req.body;
+  try {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const newUser = new User({ username, email, password: hashedPassword });
+    await newUser.save();
+    res.status(201).json(newUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Error registering user', error });
+  }
+});
+
+// Login Endpoint
+router.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'Error logging in', error });
+  }
+});
+
+// Update User Endpoint
+router.put('/updateUser', upload.single('profileImage'), async (req, res) => {
+  const { username, email, description } = req.body;
+  const profileImage = req.file ? req.file.buffer.toString('base64') : null;
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { username, email, description, profileImage },
+      { new: true }
+    );
+    res.json(updatedUser);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating user', error });
+  }
+});
+
+
+Server Setup (server.js)
+
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI || 'your_mongodb_uri_here';
+
+// Middleware
+app.use(cors());
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ limit: '50mb', extended: true }));
+
+// Routes
+app.use('/user', userRoutes);
+
+// Connect to MongoDB
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .then(() => console.log('MongoDB connected'))
+  .catch(err => console.log(err));
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+Setup and Running Locally
+Prerequisites
+Node.js and npm installed.
+MongoDB server running locally or a cloud MongoDB instance.
+A .env file with your environment variables.
+Backend Setup
+Navigate to the backend directory:
+
+
+cd backend
+Install dependencies:
+
+
+npm install
+Create a .env file with the following variables:
+
+
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret_key
+
+Start the backend server:
+nodemon start
+
+
+Frontend Setup
+Navigate to the frontend directory:
+
+
+cd frontend
+Install dependencies:
+
+
+npm install
+Start the frontend development server:
+
+npm start
+Running the Application
+Backend: Accessible at http://localhost:5000
+Frontend: Accessible at http://localhost:3000
+
+API Integration
+Endpoints
+Register User (POST /user/register)
+Request: { username, email, password }
+Response: 201 Created with user object.
+
+
+Login User (POST /user/login)
+Request: { email, password }
+Response: 200 OK with JWT token.
+
+
+Update User (PUT /user/updateUser)
+Request: Form data with optional file upload for profileImage and fields { username, email, description }.
+Response: 200 OK with updated user object.
+
+
+JWT Authentication Management
+Token Generation: Tokens are generated upon successful login using jwt.sign.
+
+javascript
+Copy code
+const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+Token Storage: Tokens are stored client-side, typically in localStorage.
+
+javascript
+Copy code
+localStorage.setItem('token', data.token);
+Token Validation: Middleware to validate tokens in protected routes.
+
+javascript
+Copy code
+const jwt = require('jsonwebtoken');
+const JWT_SECRET = process.env.JWT_SECRET;
+
+const authMiddleware = (req, res, next) => {
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (!token) return res.status(401).json({ message: 'No token provided' });
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return res.status(401).json({ message: 'Failed to authenticate token' });
+    req.user = decoded;
+    next();
+  });
+};
+
+// Apply middleware to routes
+app.use('/user/updateUser', authMiddleware);
+This documentation should provide a clear and comprehensive guide to understanding and working with your full-stack MERN application. Feel free to expand or modify sections as needed based on the specifics of your project.
+
+
+
+
+
+
