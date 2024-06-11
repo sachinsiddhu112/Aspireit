@@ -40,7 +40,7 @@ export default function Register() {
                 
                }
             } catch (error) {
-             
+             console.log(error)
               setError(error.response.data.error);
             
         }
@@ -58,7 +58,7 @@ export default function Register() {
         <input
           type="text"
           id="username"
-          value={credentials.username}
+          defaultValue={credentials.username}
           onChange={handleChange}
           required
         />
@@ -68,7 +68,7 @@ export default function Register() {
         <input
           type="email"
           id="email"
-          value={credentials.email}
+          defaultValue={credentials.email}
           onChange={handleChange}
           required
         />
@@ -78,7 +78,7 @@ export default function Register() {
         <input
           type="password"
           id="password"
-          value={credentials.password}
+          defaultValue={credentials.password}
           onChange={handleChange}
           required
         />

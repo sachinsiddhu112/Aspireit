@@ -34,7 +34,7 @@ export default function Login() {
                
                
                if(res.status==200){
-                
+                console.log(res)
                 setUser(res.data.user);
                 navigate("/");
                 
@@ -58,7 +58,7 @@ export default function Login() {
         <input
           type="username"
           id="username"
-          value={credentials.username}
+          defaultValue={credentials.username}
           onChange={handleChange}
           required
         />
@@ -68,7 +68,7 @@ export default function Login() {
         <input
           type="password"
           id="password"
-          value={credentials.password}
+          defaultValue={credentials.password}
           onChange={handleChange}
           required
         />
