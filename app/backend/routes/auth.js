@@ -110,7 +110,7 @@ router.post('/login', [
         res.status(200).json({success,authtoken,user});
     }
     catch (error) {
-        
+        console.log(error)
         res.status(500).send("Internal server error has occured");
     }
 })
